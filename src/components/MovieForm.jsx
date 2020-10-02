@@ -1,14 +1,13 @@
 import React from "react";
 import Form from "./Common/Form";
 import Joi from "joi-browser";
-import { getGenres } from "../Constants/fakeGenres";
-import { getMovie, saveMovie } from "../Constants/fakeMovies";
+import { getGenres } from "../services/genreService";
+import { getMovie, saveMovie } from "../services/movieService";
 
 class MovieForm extends Form {
   state = {
     data: {
-      // _id: "",
-      genreId: "",
+      genre: "",
       title: "",
       price: "100",
     },
@@ -16,22 +15,32 @@ class MovieForm extends Form {
     errors: {},
   };
 
-  componentDidMount() {
-    this.setState({ genres: getGenres() });
+  async componentDidMount() {
+    await this.populateGenres();
+    await this.populateMovies();
+  }
 
+  populateGenres = async () => {
+    const { data: gotGenres } = await getGenres();
+    this.setState({ genres: gotGenres });
+  };
+
+  populateMovies = async () => {
     const movieId = this.props.match.params.id;
     if (movieId === "add") return;
-
-    const movie = getMovie(movieId);
-    if (!movie) return this.props.history.replace("/not-found");
-
-    this.setState({ data: this.mapToViewModel(movie) });
-  }
+    try {
+      const { data: movie } = await getMovie(movieId);
+      this.setState({ data: this.mapToViewModel(movie) });
+    } catch (e) {
+      if (e.response && e.response.status === 404)
+        this.props.history.replace("/not-found");
+    }
+  };
 
   mapToViewModel = (movie) => {
     return {
       _id: movie._id,
-      genreId: movie.genre._id,
+      genre: movie.genre._id,
       title: movie.title,
       price: movie.price,
     };
@@ -41,12 +50,12 @@ class MovieForm extends Form {
     _id: Joi.string().label("Movie ID"),
     title: Joi.string().required().label("Movie Title"),
     price: Joi.number().min(100).max(1000).required().label("Price"),
-    genreId: Joi.string().required().label("Genre ID"),
+    genre: Joi.string().required().label("Genre ID"),
   };
 
-  doSubmit = () => {
+  doSubmit = async () => {
     console.log("Submitted");
-    saveMovie(this.state.data);
+    await saveMovie(this.state.data);
     this.props.history.push("/movies");
   };
 
@@ -60,7 +69,7 @@ class MovieForm extends Form {
         <form onSubmit={this.handleSubmit} className="mt-5">
           {this.renderInput("text", "title", "Movie Title:")}
           {this.renderInput("number", "price", "Price per unit:")}
-          {this.renderSelect("genreId", "Select genre", this.state.genres)}
+          {this.renderSelect("genre", "Select genre", this.state.genres)}
           {this.renderSubmitButton("Save")}
         </form>
       </React.Fragment>

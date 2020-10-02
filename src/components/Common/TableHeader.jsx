@@ -27,7 +27,7 @@ class TableHeader extends Component {
 
   render() {
     return (
-      <thead className="bg-dark text-light">
+      <thead className="bg-darkk text-lightt bg-light">
         <tr>
           {this.props.columns.map((column) => (
             <th
